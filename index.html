@@ -1,0 +1,1155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Portfolio</title>
+<meta name="description" content="Full Stack Developer & Graphic Designer — websites, web apps, and visual design." />
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<!-- Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+
+<!-- Tailwind (CDN / no build step) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          base: '#07070c',
+          surface: '#0f0f18',
+          surface2: '#15151f',
+          surface3: '#1b1b28',
+          line: 'rgba(255,255,255,0.08)',
+          ink: '#f5f5f7',
+          muted: '#9999a8',
+          dev: { DEFAULT: '#5b8cff', dim: '#3d5fc4' },
+          design: { DEFAULT: '#c45bff', dim: '#9540c4' },
+        },
+        fontFamily: {
+          display: ['"Space Grotesk"', 'sans-serif'],
+          body: ['Inter', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'monospace'],
+        },
+        boxShadow: {
+          glow: '0 0 60px -15px rgba(91,140,255,0.35)',
+        },
+        backgroundImage: {
+          'grad-brand': 'linear-gradient(135deg, #5b8cff 0%, #c45bff 100%)',
+          'grad-radial': 'radial-gradient(ellipse at top, rgba(91,140,255,0.12), transparent 60%)',
+        },
+      },
+    },
+  }
+</script>
+
+<!-- Reusable component classes (processed by the Tailwind CDN script) -->
+<style type="text/tailwindcss">
+  @layer components {
+    .text-gradient { @apply bg-grad-brand bg-clip-text text-transparent; }
+    .eyebrow { @apply font-mono text-xs tracking-[0.2em] uppercase text-dev; }
+    .card { @apply bg-surface border border-line rounded-2xl; }
+    .btn-primary { @apply inline-flex items-center gap-2 rounded-full bg-grad-brand px-6 py-3 font-medium text-white transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98]; }
+    .btn-outline { @apply inline-flex items-center gap-2 rounded-full border border-line px-6 py-3 font-medium text-ink transition-colors duration-200 hover:border-dev hover:bg-surface2; }
+    .btn-sm { @apply !px-4 !py-2 text-sm; }
+    .input { @apply w-full rounded-lg border border-line bg-surface2 px-3 py-2 text-sm text-ink outline-none transition-colors focus:border-dev; }
+    .label { @apply mb-1.5 block text-xs font-medium text-muted; }
+  }
+</style>
+
+<style>
+  html { scroll-behavior: smooth; }
+  body { background-color: #07070c; color: #f5f5f7; font-family: 'Inter', sans-serif; }
+  ::selection { background: rgba(196, 91, 255, 0.35); }
+  ::placeholder { color: rgba(255,255,255,0.3); }
+  a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+    outline: 2px solid #c45bff; outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+  }
+  .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+</style>
+</head>
+<body class="bg-base font-body text-ink">
+
+<div id="app"></div>
+
+<script type="module">
+/* =========================================================================
+   1. CONFIG — fill in your own Firebase project values below.
+   ========================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyAWbgHmDCVDIQ_ZnyM98fe3Xy8COClVQtI",
+  authDomain: "portfolio-be4ca.firebaseapp.com",
+  projectId: "portfolio-be4ca",
+  storageBucket: "portfolio-be4ca.firebasestorage.app",
+  messagingSenderId: "53974813200",
+  appId: "1:53974813200:web:edc09f8281615ed3bd9895",
+};
+
+// The hidden URL for your admin panel: yoursite.com/index.html#admin-XXXX
+// Change this string to something only you know before you deploy.
+const ADMIN_HASH = '#admin-2847';
+
+/* =========================================================================
+   2. FIREBASE — loaded straight from Google's CDN, no npm install needed.
+   ========================================================================= */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot,
+  collection, addDoc, deleteDoc, getDocs, query, orderBy,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getStorage, ref as storageRef, uploadBytes, getDownloadURL,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const storage = getStorage(app);
+const CONTENT_DOC = doc(db, 'site', 'content');
+
+/* =========================================================================
+   3. DEFAULT / FALLBACK CONTENT — shown until real data is loaded.
+   ========================================================================= */
+const DEFAULT_CONTENT = {
+  hero: {
+    greeting: "Hi, I'm",
+    name: 'Your Name',
+    role: 'Full Stack Developer',
+    roleHighlight: 'Web Apps & Graphic Design',
+    description: "I design and build complete digital products — from responsive websites and full stack web apps to the brand visuals that make them stand out.",
+    photoUrl: '',
+    resumeUrl: '',
+  },
+  about: {
+    eyebrow: 'About Me',
+    heading: 'I build the product and the look of the product',
+    headingHighlight: 'and the look',
+    paragraph: "I work across the full stack — interfaces, servers, and databases — and across the visual side too, from UI screens to brand assets. That combination means fewer handoffs and a final product that's technically solid and visually considered.",
+  },
+  stats: [
+    { id: 's1', value: '15+', label: 'Projects Shipped' },
+    { id: 's2', value: '2+', label: 'Years Experience' },
+    { id: 's3', value: '3', label: 'Disciplines' },
+    { id: 's4', value: '100%', label: 'Client Satisfaction' },
+  ],
+  contact: {
+    eyebrow: "Let's Talk",
+    heading: 'Have a project in mind?',
+    paragraph: "Available for freelance work and full-time roles. Tell me what you're building.",
+    email: '', phone: '', location: '',
+  },
+  social: { github: '', linkedin: '', twitter: '', instagram: '', whatsapp: '' },
+};
+
+const DEFAULT_SKILLS = [
+  { iconKey: 'html5', order: 0 }, { iconKey: 'css3', order: 1 }, { iconKey: 'javascript', order: 2 },
+  { iconKey: 'react', order: 3 }, { iconKey: 'nodejs', order: 4 }, { iconKey: 'firebase', order: 5 },
+  { iconKey: 'tailwind', order: 6 }, { iconKey: 'figma', order: 7 }, { iconKey: 'photoshop', order: 8 },
+  { iconKey: 'illustrator', order: 9 }, { iconKey: 'github', order: 10 }, { iconKey: 'canva', order: 11 },
+];
+
+const DEFAULT_SERVICES = [
+  { group: 'development', iconKey: 'laptop', title: 'Website Development', description: 'Responsive, fast-loading websites built with clean, maintainable code.', order: 0 },
+  { group: 'development', iconKey: 'cubes', title: 'Web Applications', description: 'Full stack apps with real databases, authentication, and admin dashboards.', order: 1 },
+  { group: 'development', iconKey: 'server', title: 'Backend & Database', description: 'APIs, data modelling, and integrations that keep the app running smoothly.', order: 2 },
+  { group: 'design', iconKey: 'palette', title: 'UI/UX Design', description: 'Interface design focused on clarity, usability, and a polished feel.', order: 3 },
+  { group: 'design', iconKey: 'brush', title: 'Graphic Design', description: 'Logos, social posts, and brand visuals that look consistent everywhere.', order: 4 },
+  { group: 'design', iconKey: 'pen', title: 'Branding', description: 'A cohesive visual identity — colors, type, and assets that fit the brand.', order: 5 },
+];
+
+const DEFAULT_PROJECTS = [
+  { title: 'Sample Project', description: 'Replace this with a real project from the admin panel.', features: ['Add what it does', 'Add the stack used', 'Add the result'], tags: ['React', 'Firebase'], images: [], videoUrl: '', liveUrl: '', repoUrl: '', order: 0 },
+];
+
+/* =========================================================================
+   4. ICONS — Font Awesome where a reliable brand icon exists, a small
+      colored monogram badge everywhere else (keeps it consistent + classy
+      without depending on icon sets that may not have every brand mark).
+   ========================================================================= */
+const ICONS = {
+  html5:       { label: 'HTML5',       fa: 'fa-brands fa-html5',        color: '#E34F26' },
+  css3:        { label: 'CSS3',        fa: 'fa-brands fa-css3-alt',     color: '#1572B6' },
+  javascript:  { label: 'JavaScript',  fa: 'fa-brands fa-js',           color: '#F7DF1E' },
+  typescript:  { label: 'TypeScript',  mono: 'TS',  color: '#3178C6' },
+  react:       { label: 'React.js',    fa: 'fa-brands fa-react',        color: '#61DAFB' },
+  nextjs:      { label: 'Next.js',     mono: 'N',   color: '#FFFFFF' },
+  vuejs:       { label: 'Vue.js',      fa: 'fa-brands fa-vuejs',        color: '#4FC08D' },
+  tailwind:    { label: 'Tailwind CSS',mono: 'TW',  color: '#38BDF8' },
+  bootstrap:   { label: 'Bootstrap',   fa: 'fa-brands fa-bootstrap',    color: '#7952B3' },
+  nodejs:      { label: 'Node.js',     fa: 'fa-brands fa-node-js',      color: '#5FA04E' },
+  express:     { label: 'Express',     mono: 'EX',  color: '#FFFFFF' },
+  python:      { label: 'Python',      fa: 'fa-brands fa-python',       color: '#3776AB' },
+  php:         { label: 'PHP',         fa: 'fa-brands fa-php',          color: '#777BB4' },
+  java:        { label: 'Java',        mono: 'JV',  color: '#EA2D2E' },
+  mysql:       { label: 'MySQL',       mono: 'SQL', color: '#4479A1' },
+  mongodb:     { label: 'MongoDB',     mono: 'MDB', color: '#47A248' },
+  firebase:    { label: 'Firebase',    mono: 'FB',  color: '#FFCA28' },
+  supabase:    { label: 'Supabase',    mono: 'SB',  color: '#3ECF8E' },
+  git:         { label: 'Git',         fa: 'fa-brands fa-git-alt',      color: '#F05032' },
+  github:      { label: 'Git & GitHub',fa: 'fa-brands fa-github',       color: '#FFFFFF' },
+  vite:        { label: 'Vite',        mono: 'VT',  color: '#646CFF' },
+  redux:       { label: 'Redux',       mono: 'RDX', color: '#764ABC' },
+  graphql:     { label: 'GraphQL',     mono: 'GQL', color: '#E10098' },
+  figma:       { label: 'Figma',       fa: 'fa-brands fa-figma',        color: '#F24E1E' },
+  photoshop:   { label: 'Photoshop',   mono: 'Ps',  color: '#31A8FF' },
+  illustrator: { label: 'Illustrator', mono: 'Ai',  color: '#FF9A00' },
+  canva:       { label: 'Canva',       mono: 'Cv',  color: '#00C4CC' },
+  blender:     { label: 'Blender',     mono: 'Bl',  color: '#F5792A' },
+  sketch:      { label: 'Sketch',      fa: 'fa-brands fa-sketch',       color: '#F7B500' },
+  wordpress:   { label: 'WordPress',   fa: 'fa-brands fa-wordpress-simple', color: '#FFFFFF' },
+  shopify:     { label: 'Shopify',     mono: 'Sh',  color: '#7AB55C' },
+  netlify:     { label: 'Netlify',     mono: 'Nf',  color: '#00C7B7' },
+  vercel:      { label: 'Vercel',      mono: 'Vc',  color: '#FFFFFF' },
+  docker:      { label: 'Docker',      fa: 'fa-brands fa-docker',       color: '#2496ED' },
+  postman:     { label: 'Postman',     mono: 'Pm',  color: '#FF6C37' },
+};
+const ICON_KEYS = Object.keys(ICONS);
+
+const SERVICE_ICONS = {
+  code: 'fa-solid fa-code', laptop: 'fa-solid fa-laptop-code', brush: 'fa-solid fa-paintbrush',
+  mobile: 'fa-solid fa-mobile-screen', palette: 'fa-solid fa-palette', pen: 'fa-solid fa-pen-nib',
+  camera: 'fa-solid fa-camera-retro', cubes: 'fa-solid fa-cubes', rocket: 'fa-solid fa-rocket',
+  server: 'fa-solid fa-server',
+};
+const SERVICE_ICON_KEYS = Object.keys(SERVICE_ICONS);
+
+function iconHtml(key, size) {
+  const i = ICONS[key] || ICONS.javascript;
+  if (i.fa) return `<i class="${i.fa}" style="color:${i.color};font-size:${size}px"></i>`;
+  return `<span class="flex items-center justify-center rounded-lg font-display font-bold" style="width:${size}px;height:${size}px;background:${i.color}22;color:${i.color};font-size:${Math.round(size*0.4)}px">${i.mono}</span>`;
+}
+
+/* =========================================================================
+   5. HELPERS
+   ========================================================================= */
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+function esc(str) {
+  return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function uid() { return Math.random().toString(36).slice(2, 9); }
+
+function getVideoEmbed(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
+      let id = u.searchParams.get('v');
+      if (!id && u.hostname.includes('youtu.be')) id = u.pathname.slice(1);
+      if (!id && u.pathname.includes('/embed/')) id = u.pathname.split('/embed/')[1];
+      if (!id) return null;
+      return { type: 'iframe', src: `https://www.youtube.com/embed/${id}` };
+    }
+    if (u.hostname.includes('vimeo.com')) {
+      const id = u.pathname.split('/').filter(Boolean).pop();
+      if (!id) return null;
+      return { type: 'iframe', src: `https://player.vimeo.com/video/${id}` };
+    }
+    return { type: 'video', src: url };
+  } catch { return null; }
+}
+
+async function uploadImage(file, folder) {
+  const path = `${folder}/${Date.now()}-${file.name}`;
+  const ref = storageRef(storage, path);
+  await uploadBytes(ref, file);
+  return getDownloadURL(ref);
+}
+
+/* =========================================================================
+   6. STATE
+   ========================================================================= */
+const pub = { // public, real-time site data
+  content: DEFAULT_CONTENT, contentExists: false, loading: true,
+  skills: DEFAULT_SKILLS, services: DEFAULT_SERVICES, projects: DEFAULT_PROJECTS,
+  openProjectIdx: null,
+};
+const adminState = { // admin-only local working copy, fetched once per dashboard visit
+  user: undefined, tab: 'hero',
+  content: null, skills: [], services: [], projects: [],
+};
+
+/* =========================================================================
+   7. ROUTER
+   ========================================================================= */
+function route() {
+  if (location.hash === ADMIN_HASH) renderAdminGate();
+  else renderPublicSite();
+}
+window.addEventListener('hashchange', route);
+
+/* =========================================================================
+   8. PUBLIC SITE — subscriptions
+   ========================================================================= */
+onSnapshot(CONTENT_DOC, (snap) => {
+  if (snap.exists()) {
+    const d = snap.data();
+    pub.content = {
+      hero: { ...DEFAULT_CONTENT.hero, ...d.hero },
+      about: { ...DEFAULT_CONTENT.about, ...d.about },
+      stats: d.stats?.length ? d.stats : DEFAULT_CONTENT.stats,
+      contact: { ...DEFAULT_CONTENT.contact, ...d.contact },
+      social: { ...DEFAULT_CONTENT.social, ...d.social },
+    };
+    pub.contentExists = true;
+  } else { pub.content = DEFAULT_CONTENT; pub.contentExists = false; }
+  pub.loading = false;
+  if (location.hash !== ADMIN_HASH) renderPublicSite();
+});
+onSnapshot(query(collection(db, 'skills'), orderBy('order', 'asc')), (snap) => {
+  if (!snap.empty) pub.skills = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  if (location.hash !== ADMIN_HASH) renderPublicSite();
+});
+onSnapshot(query(collection(db, 'services'), orderBy('order', 'asc')), (snap) => {
+  if (!snap.empty) pub.services = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  if (location.hash !== ADMIN_HASH) renderPublicSite();
+});
+onSnapshot(query(collection(db, 'projects'), orderBy('order', 'asc')), (snap) => {
+  if (!snap.empty) pub.projects = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  if (location.hash !== ADMIN_HASH) renderPublicSite();
+});
+
+/* =========================================================================
+   9. PUBLIC SITE — render
+   ========================================================================= */
+function renderPublicSite() {
+  const { hero, about, stats, contact, social } = pub.content;
+  const nameParts = (hero.name || 'Your Name').trim().split(' ');
+  const lastWord = nameParts.pop();
+  const firstWords = nameParts.join(' ');
+  const initials = (hero.name || 'Y N').split(' ').map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+
+  const socialIcons = { github: 'fa-brands fa-github', linkedin: 'fa-brands fa-linkedin', twitter: 'fa-brands fa-twitter', instagram: 'fa-brands fa-instagram', whatsapp: 'fa-brands fa-whatsapp' };
+  const socialEntries = Object.entries(social || {}).filter(([, v]) => v);
+
+  function highlighted(text, highlight) {
+    if (!highlight || !text.includes(highlight)) return esc(text);
+    const idx = text.indexOf(highlight);
+    return `${esc(text.slice(0, idx))}<span class="text-gradient">${esc(highlight)}</span>${esc(text.slice(idx + highlight.length))}`;
+  }
+
+  const development = pub.services.filter((s) => s.group !== 'design');
+  const design = pub.services.filter((s) => s.group === 'design');
+
+  document.getElementById('app').innerHTML = `
+    <div class="min-h-screen bg-base font-body text-ink">
+      ${!pub.loading && !pub.contentExists ? `
+        <div class="bg-dev/10 px-6 py-2 text-center text-xs text-dev">
+          You're viewing placeholder content — go to <code class="font-mono">${esc(ADMIN_HASH)}</code> to add your own.
+        </div>` : ''}
+
+      <!-- NAVBAR -->
+      <header id="navbar" class="sticky top-0 z-40 transition-colors duration-300">
+        <nav class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          <a href="#home" class="font-display text-xl font-bold tracking-tight text-gradient">${esc(initials) || 'YN'}</a>
+          <ul class="hidden items-center gap-8 md:flex">
+            ${['home','about','skills','services','projects','contact'].map((s) => `<li><a href="#${s}" class="text-sm text-muted transition-colors hover:text-ink capitalize">${s}</a></li>`).join('')}
+          </ul>
+          <div class="hidden md:block">
+            ${hero.resumeUrl ? `<a href="${esc(hero.resumeUrl)}" target="_blank" rel="noreferrer" class="btn-outline btn-sm">Resume <i class="fa-solid fa-arrow-down"></i></a>` : ''}
+          </div>
+          <button id="menuBtn" aria-label="Toggle menu" class="flex flex-col gap-1.5 md:hidden">
+            <span class="h-0.5 w-6 bg-ink"></span><span class="h-0.5 w-6 bg-ink"></span><span class="h-0.5 w-6 bg-ink"></span>
+          </button>
+        </nav>
+        <div id="mobileMenu" class="hidden border-t border-line bg-base px-6 pb-6 md:hidden">
+          <ul class="flex flex-col gap-4 pt-4">
+            ${['home','about','skills','services','projects','contact'].map((s) => `<li><a href="#${s}" class="text-sm text-muted hover:text-ink capitalize">${s}</a></li>`).join('')}
+          </ul>
+        </div>
+      </header>
+
+      <!-- HERO -->
+      <section id="home" class="relative overflow-hidden bg-grad-radial pt-16 pb-24 md:pt-24">
+        <div class="pointer-events-none absolute -top-32 right-0 h-96 w-96 rounded-full bg-dev/20 blur-[100px]"></div>
+        <div class="pointer-events-none absolute bottom-0 left-0 h-72 w-72 rounded-full bg-design/20 blur-[100px]"></div>
+        <div class="mx-auto grid max-w-6xl items-center gap-12 px-6 md:grid-cols-2">
+          <div>
+            <p class="eyebrow mb-4">${esc(hero.greeting)}</p>
+            <h1 class="font-display text-4xl font-bold leading-[1.1] sm:text-5xl lg:text-6xl">
+              ${firstWords ? esc(firstWords) + ' ' : ''}<span class="text-gradient">${esc(lastWord)}</span>
+            </h1>
+            <p class="mt-3 text-lg text-muted sm:text-xl">${esc(hero.role)} <span class="text-gradient font-medium">${esc(hero.roleHighlight)}</span></p>
+            <p class="mt-5 max-w-md text-sm leading-relaxed text-muted sm:text-base">${esc(hero.description)}</p>
+            <div class="mt-8 flex flex-wrap items-center gap-4">
+              <a href="#projects" class="btn-primary">View My Work <i class="fa-solid fa-arrow-right"></i></a>
+              <a href="#contact" class="btn-outline">Contact Me</a>
+            </div>
+            ${socialEntries.length ? `
+              <div class="mt-10">
+                <p class="mb-3 text-xs text-muted">Follow Me</p>
+                <div class="flex gap-3">
+                  ${socialEntries.map(([k, url]) => socialIcons[k] ? `<a href="${esc(url)}" target="_blank" rel="noreferrer" aria-label="${k}" class="flex h-10 w-10 items-center justify-center rounded-full border border-line text-muted transition-colors hover:border-dev hover:text-ink"><i class="${socialIcons[k]}"></i></a>` : '').join('')}
+                </div>
+              </div>` : ''}
+          </div>
+          <div class="relative mx-auto w-full max-w-sm">
+            <div class="absolute inset-0 scale-105 rounded-[2.5rem] bg-grad-brand opacity-20 blur-2xl"></div>
+            <div class="relative aspect-[4/5] overflow-hidden rounded-[2.5rem] border border-line bg-surface">
+              ${hero.photoUrl ? `<img src="${esc(hero.photoUrl)}" alt="${esc(hero.name)}" class="h-full w-full object-cover" />` : `<div class="flex h-full w-full items-center justify-center text-sm text-muted">Add a photo in the admin panel</div>`}
+            </div>
+            <div class="absolute -bottom-5 -left-5 rounded-2xl border border-line bg-surface2/90 px-4 py-3 shadow-glow backdrop-blur">
+              <p class="font-mono text-[11px] tracking-widest text-dev">&lt;/&gt;  +  ✦</p>
+              <p class="mt-0.5 text-xs font-medium text-ink">Dev &amp; Design</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABOUT -->
+      <section id="about" class="border-t border-line py-24">
+        <div class="mx-auto grid max-w-6xl gap-12 px-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div>
+            <p class="eyebrow mb-3">${esc(about.eyebrow)}</p>
+            <h2 class="font-display text-3xl font-bold leading-tight sm:text-4xl">${highlighted(about.heading, about.headingHighlight)}</h2>
+            <p class="mt-5 max-w-xl text-sm leading-relaxed text-muted sm:text-base">${esc(about.paragraph)}</p>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            ${stats.map((s) => `<div class="card p-5"><p class="font-display text-2xl font-bold text-gradient sm:text-3xl">${esc(s.value)}</p><p class="mt-1 text-xs text-muted sm:text-sm">${esc(s.label)}</p></div>`).join('')}
+          </div>
+        </div>
+      </section>
+
+      <!-- SKILLS -->
+      <section id="skills" class="border-t border-line py-24">
+        <div class="mx-auto max-w-6xl px-6">
+          <p class="eyebrow mb-3">My Skills</p>
+          <h2 class="font-display text-3xl font-bold sm:text-4xl">Tools I work with</h2>
+          <div class="mt-10 grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
+            ${pub.skills.map((s) => `
+              <div class="card flex flex-col items-center gap-3 px-3 py-6 transition-transform duration-200 hover:-translate-y-1 hover:border-dev/40">
+                ${iconHtml(s.iconKey, 30)}
+                <span class="text-center text-xs text-muted">${esc((ICONS[s.iconKey] || ICONS.javascript).label)}</span>
+              </div>`).join('')}
+          </div>
+        </div>
+      </section>
+
+      <!-- SERVICES -->
+      <section id="services" class="border-t border-line py-24">
+        <div class="mx-auto max-w-6xl px-6">
+          <p class="eyebrow mb-3">What I Do</p>
+          <h2 class="font-display text-3xl font-bold sm:text-4xl">Development <span class="text-muted">&amp;</span> <span class="text-gradient">Design</span></h2>
+          <p class="mt-3 max-w-xl text-sm text-muted sm:text-base">One person handling both sides means the build and the brand actually match.</p>
+          ${development.length ? `
+            <div class="mt-10">
+              <p class="mb-4 flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-dev"><span class="h-1.5 w-1.5 rounded-full bg-dev"></span> Development</p>
+              <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">${development.map(serviceCardHtml).join('')}</div>
+            </div>` : ''}
+          ${design.length ? `
+            <div class="mt-10">
+              <p class="mb-4 flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-design"><span class="h-1.5 w-1.5 rounded-full bg-design"></span> Design</p>
+              <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">${design.map(serviceCardHtml).join('')}</div>
+            </div>` : ''}
+        </div>
+      </section>
+
+      <!-- PROJECTS -->
+      <section id="projects" class="border-t border-line py-24">
+        <div class="mx-auto max-w-6xl px-6">
+          <p class="eyebrow mb-3">Featured Work</p>
+          <h2 class="font-display text-3xl font-bold sm:text-4xl">Things I've built</h2>
+          ${pub.projects.length === 0 ? `<p class="mt-10 text-sm text-muted">No projects yet — add your first one from the admin panel.</p>` : `
+            <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              ${pub.projects.map((p, i) => projectCardHtml(p, i)).join('')}
+            </div>`}
+        </div>
+      </section>
+      <div id="projectModalRoot"></div>
+
+      <!-- CONTACT -->
+      <section id="contact" class="border-t border-line py-24">
+        <div class="mx-auto max-w-6xl px-6">
+          <div class="card relative overflow-hidden p-8 sm:p-12">
+            <div class="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-design/20 blur-[100px]"></div>
+            <div class="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+              <div>
+                <p class="eyebrow mb-3">${esc(contact.eyebrow)}</p>
+                <h2 class="font-display text-3xl font-bold sm:text-4xl">${esc(contact.heading)}</h2>
+                <p class="mt-3 max-w-md text-sm text-muted sm:text-base">${esc(contact.paragraph)}</p>
+                <div class="mt-6 flex flex-wrap gap-3">
+                  ${contact.email ? `<a href="mailto:${esc(contact.email)}" class="btn-primary"><i class="fa-solid fa-envelope"></i> Get In Touch</a>` : ''}
+                  ${social.whatsapp ? `<a href="${esc(social.whatsapp)}" target="_blank" rel="noreferrer" class="btn-outline"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>` : ''}
+                </div>
+              </div>
+              <div class="space-y-4">
+                ${contact.email ? `<div class="flex items-center gap-3 text-sm"><span class="flex h-9 w-9 items-center justify-center rounded-full bg-dev/15 text-dev"><i class="fa-solid fa-envelope"></i></span><span class="text-muted">${esc(contact.email)}</span></div>` : ''}
+                ${contact.phone ? `<div class="flex items-center gap-3 text-sm"><span class="flex h-9 w-9 items-center justify-center rounded-full bg-dev/15 text-dev"><i class="fa-solid fa-phone"></i></span><span class="text-muted">${esc(contact.phone)}</span></div>` : ''}
+                ${contact.location ? `<div class="flex items-center gap-3 text-sm"><span class="flex h-9 w-9 items-center justify-center rounded-full bg-design/15 text-design"><i class="fa-solid fa-location-dot"></i></span><span class="text-muted">${esc(contact.location)}</span></div>` : ''}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FOOTER -->
+      <footer class="border-t border-line py-8">
+        <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 text-xs text-muted sm:flex-row">
+          <p>© ${new Date().getFullYear()} ${esc(hero.name || 'Your Name')}. All rights reserved.</p>
+          <div class="flex gap-5">
+            ${['home','about','skills','projects','contact'].map((s) => `<a href="#${s}" class="hover:text-ink capitalize">${s}</a>`).join('')}
+          </div>
+        </div>
+      </footer>
+    </div>
+  `;
+
+  wirePublicEvents();
+  if (pub.openProjectIdx !== null) renderProjectModal(pub.openProjectIdx);
+}
+
+function serviceCardHtml(s) {
+  const isDesign = s.group === 'design';
+  return `
+    <div class="card p-6 transition-transform duration-200 hover:-translate-y-1 ${isDesign ? 'hover:border-design/40' : 'hover:border-dev/40'}">
+      <div class="mb-4 flex h-11 w-11 items-center justify-center rounded-xl ${isDesign ? 'bg-design/15 text-design' : 'bg-dev/15 text-dev'}">
+        <i class="${SERVICE_ICONS[s.iconKey] || SERVICE_ICONS.code}"></i>
+      </div>
+      <h3 class="font-display text-lg font-semibold">${esc(s.title)}</h3>
+      <p class="mt-2 text-sm leading-relaxed text-muted">${esc(s.description)}</p>
+    </div>`;
+}
+
+function projectCardHtml(p, i) {
+  const thumb = p.images?.[0];
+  return `
+    <button data-open-project="${i}" class="card project-card group block w-full overflow-hidden text-left transition-transform duration-200 hover:-translate-y-1 hover:border-dev/40">
+      <div class="relative aspect-video overflow-hidden bg-surface2">
+        ${thumb ? `<img src="${esc(thumb)}" alt="${esc(p.title)}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />` : `<div class="flex h-full w-full items-center justify-center text-xs text-muted">No image yet</div>`}
+        ${p.videoUrl ? `<span class="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white"><i class="fa-solid fa-circle-play"></i></span>` : ''}
+      </div>
+      <div class="p-5">
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="font-display text-base font-semibold">${esc(p.title)}</h3>
+          <i class="fa-solid fa-arrow-up-right-from-square text-xs text-muted"></i>
+        </div>
+        <p class="mt-2 line-clamp-2 text-sm text-muted">${esc(p.description)}</p>
+        ${p.tags?.length ? `<div class="mt-4 flex flex-wrap gap-2">${p.tags.slice(0,3).map((t) => `<span class="rounded-full bg-surface2 px-2.5 py-1 text-[11px] text-muted">${esc(t)}</span>`).join('')}</div>` : ''}
+      </div>
+    </button>`;
+}
+
+function renderProjectModal(i) {
+  const p = pub.projects[i];
+  const root = document.getElementById('projectModalRoot');
+  if (!p) { root.innerHTML = ''; return; }
+  const images = p.images?.length ? p.images : [];
+  const embed = getVideoEmbed(p.videoUrl);
+  const active = pub._modalActiveImg || 0;
+
+  root.innerHTML = `
+    <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 p-4 backdrop-blur-sm sm:items-center sm:p-6" id="modalBackdrop">
+      <div class="card relative w-full max-w-3xl p-0" id="modalCard">
+        <button id="modalClose" aria-label="Close" class="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-surface2 text-ink hover:bg-surface3"><i class="fa-solid fa-xmark"></i></button>
+        <div class="max-h-[80vh] overflow-y-auto p-6 sm:p-8">
+          ${images.length ? `
+            <div class="relative mb-6 aspect-video overflow-hidden rounded-xl border border-line bg-surface2">
+              <img src="${esc(images[active])}" alt="" class="h-full w-full object-cover" />
+              ${images.length > 1 ? `
+                <button id="modalPrev" class="absolute left-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                <button id="modalNext" class="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+              ` : ''}
+            </div>
+            ${images.length > 1 ? `<div class="mb-6 flex gap-2 overflow-x-auto">${images.map((img, idx) => `<button data-thumb="${idx}" class="h-14 w-20 flex-shrink-0 overflow-hidden rounded-lg border ${idx === active ? 'border-dev' : 'border-line opacity-60'}"><img src="${esc(img)}" class="h-full w-full object-cover" /></button>`).join('')}</div>` : ''}
+          ` : ''}
+          ${embed ? `
+            <div class="mb-6 aspect-video overflow-hidden rounded-xl border border-line bg-black">
+              ${embed.type === 'iframe' ? `<iframe src="${esc(embed.src)}" title="Project video" class="h-full w-full" allowfullscreen></iframe>` : `<video src="${esc(embed.src)}" controls class="h-full w-full"></video>`}
+            </div>` : ''}
+          <h3 class="font-display text-2xl font-bold">${esc(p.title)}</h3>
+          <p class="mt-2 text-sm leading-relaxed text-muted sm:text-base">${esc(p.description)}</p>
+          ${p.features?.length ? `<ul class="mt-4 space-y-2">${p.features.map((f) => `<li class="flex items-start gap-2 text-sm text-muted"><span class="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-grad-brand"></span>${esc(f)}</li>`).join('')}</ul>` : ''}
+          ${p.tags?.length ? `<div class="mt-5 flex flex-wrap gap-2">${p.tags.map((t) => `<span class="rounded-full border border-line px-3 py-1 text-xs text-muted">${esc(t)}</span>`).join('')}</div>` : ''}
+          <div class="mt-6 flex flex-wrap gap-3">
+            ${p.liveUrl ? `<a href="${esc(p.liveUrl)}" target="_blank" rel="noreferrer" class="btn-primary btn-sm">Live Site <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i></a>` : ''}
+            ${p.repoUrl ? `<a href="${esc(p.repoUrl)}" target="_blank" rel="noreferrer" class="btn-outline btn-sm"><i class="fa-brands fa-github"></i> Code</a>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  $('#modalClose').onclick = () => { pub.openProjectIdx = null; pub._modalActiveImg = 0; root.innerHTML = ''; };
+  $('#modalBackdrop').onclick = (e) => { if (e.target.id === 'modalBackdrop') $('#modalClose').onclick(); };
+  const prev = $('#modalPrev'), next = $('#modalNext');
+  if (prev) prev.onclick = () => { pub._modalActiveImg = (active - 1 + images.length) % images.length; renderProjectModal(i); };
+  if (next) next.onclick = () => { pub._modalActiveImg = (active + 1) % images.length; renderProjectModal(i); };
+  $$('[data-thumb]', root).forEach((b) => b.onclick = () => { pub._modalActiveImg = Number(b.dataset.thumb); renderProjectModal(i); });
+}
+
+function wirePublicEvents() {
+  const navbar = $('#navbar');
+  function onScroll() {
+    if (window.scrollY > 12) navbar.classList.add('bg-base/85', 'backdrop-blur-md', 'border-b', 'border-line');
+    else navbar.classList.remove('bg-base/85', 'backdrop-blur-md', 'border-b', 'border-line');
+  }
+  window.addEventListener('scroll', onScroll);
+  onScroll();
+
+  $('#menuBtn').onclick = () => $('#mobileMenu').classList.toggle('hidden');
+  $$('#mobileMenu a').forEach((a) => a.onclick = () => $('#mobileMenu').classList.add('hidden'));
+
+  $$('[data-open-project]').forEach((btn) => {
+    btn.onclick = () => { pub.openProjectIdx = Number(btn.dataset.openProject); pub._modalActiveImg = 0; renderProjectModal(pub.openProjectIdx); };
+  });
+}
+
+/* =========================================================================
+   10. ADMIN — auth gate
+   ========================================================================= */
+onAuthStateChanged(auth, (u) => {
+  adminState.user = u;
+  if (location.hash === ADMIN_HASH) renderAdminGate();
+});
+
+function renderAdminGate() {
+  if (adminState.user === undefined) {
+    document.getElementById('app').innerHTML = `<div class="flex min-h-screen items-center justify-center bg-base text-sm text-muted">Checking session…</div>`;
+    return;
+  }
+  if (!adminState.user) { renderAdminLogin(); return; }
+  loadAdminData().then(renderAdminDashboard);
+}
+
+async function loadAdminData() {
+  const snap = await getDoc(CONTENT_DOC);
+  adminState.content = snap.exists() ? {
+    hero: { ...DEFAULT_CONTENT.hero, ...snap.data().hero },
+    about: { ...DEFAULT_CONTENT.about, ...snap.data().about },
+    stats: snap.data().stats?.length ? snap.data().stats : DEFAULT_CONTENT.stats,
+    contact: { ...DEFAULT_CONTENT.contact, ...snap.data().contact },
+    social: { ...DEFAULT_CONTENT.social, ...snap.data().social },
+  } : null;
+  adminState.contentExists = snap.exists();
+
+  const [skillsSnap, servicesSnap, projectsSnap] = await Promise.all([
+    getDocs(query(collection(db, 'skills'), orderBy('order', 'asc'))),
+    getDocs(query(collection(db, 'services'), orderBy('order', 'asc'))),
+    getDocs(query(collection(db, 'projects'), orderBy('order', 'asc'))),
+  ]);
+  adminState.skills = skillsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  adminState.services = servicesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  adminState.projects = projectsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+function renderAdminLogin() {
+  document.getElementById('app').innerHTML = `
+    <div class="flex min-h-screen items-center justify-center bg-base px-6 font-body text-ink">
+      <form id="loginForm" class="card w-full max-w-sm p-8">
+        <h1 class="font-display text-xl font-bold">Admin Sign In</h1>
+        <p class="mt-1 text-sm text-muted">Only you should have this link.</p>
+        <div class="mt-6"><label class="label">Email</label><input id="loginEmail" class="input" type="email" required /></div>
+        <div class="mt-4"><label class="label">Password</label><input id="loginPassword" class="input" type="password" required /></div>
+        <p id="loginError" class="mt-3 hidden text-xs text-rose-400">Wrong email or password.</p>
+        <button type="submit" id="loginSubmit" class="btn-primary mt-6 w-full justify-center">Sign In</button>
+        <p class="mt-5 text-xs text-muted">No account yet? Create one in Firebase Console → Authentication → Users, using email/password sign-in.</p>
+      </form>
+    </div>`;
+  $('#loginForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = $('#loginSubmit'); btn.disabled = true; btn.textContent = 'Signing in…';
+    try {
+      await signInWithEmailAndPassword(auth, $('#loginEmail').value, $('#loginPassword').value);
+    } catch {
+      $('#loginError').classList.remove('hidden');
+      btn.disabled = false; btn.textContent = 'Sign In';
+    }
+  };
+}
+
+/* =========================================================================
+   11. ADMIN — dashboard shell
+   ========================================================================= */
+const TABS = [
+  { key: 'hero', label: 'Hero' }, { key: 'about', label: 'About & Stats' },
+  { key: 'skills', label: 'Skills' }, { key: 'services', label: 'What I Do' },
+  { key: 'projects', label: 'Projects' }, { key: 'contact', label: 'Contact & Social' },
+  { key: 'settings', label: 'Settings' },
+];
+
+function renderAdminDashboard() {
+  document.getElementById('app').innerHTML = `
+    <div class="min-h-screen bg-base font-body text-ink">
+      <div class="flex flex-col md:flex-row">
+        <aside class="border-b border-line p-4 md:min-h-screen md:w-60 md:border-b-0 md:border-r">
+          <p class="font-display px-2 text-lg font-bold text-gradient">Admin Panel</p>
+          <p class="truncate px-2 text-xs text-muted">${esc(adminState.user?.email || '')}</p>
+          <nav id="adminTabs" class="mt-6 flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
+            ${TABS.map((t) => `<button data-tab="${t.key}" class="tab-btn whitespace-nowrap rounded-lg px-3 py-2 text-left text-sm transition-colors ${adminState.tab === t.key ? 'bg-surface2 text-ink' : 'text-muted hover:bg-surface2/50 hover:text-ink'}">${t.label}</button>`).join('')}
+          </nav>
+          <div class="mt-6 flex gap-2 px-2 md:flex-col">
+            <a href="${esc(location.pathname)}" target="_blank" rel="noreferrer" class="btn-outline btn-sm !text-xs">View Site</a>
+            <button id="signOutBtn" class="btn-outline btn-sm !text-xs">Sign Out</button>
+          </div>
+        </aside>
+        <main id="adminMain" class="flex-1 p-6 md:p-10"></main>
+      </div>
+    </div>`;
+
+  $$('.tab-btn').forEach((b) => b.onclick = () => { adminState.tab = b.dataset.tab; renderAdminDashboard(); });
+  $('#signOutBtn').onclick = () => signOut(auth);
+  renderAdminTabContent();
+}
+
+function renderAdminTabContent() {
+  const main = $('#adminMain');
+  const renderers = {
+    hero: renderHeroEditor, about: renderAboutEditor, skills: renderSkillsEditor,
+    services: renderServicesEditor, projects: renderProjectsEditor,
+    contact: renderContactEditor, settings: renderSettingsEditor,
+  };
+  main.innerHTML = '';
+  renderers[adminState.tab](main);
+}
+
+function savedFlag(container) {
+  const span = document.createElement('span');
+  span.className = 'text-xs text-emerald-400';
+  span.textContent = 'Saved ✓';
+  container.appendChild(span);
+  setTimeout(() => span.remove(), 2000);
+}
+
+/* ---- Hero editor ---- */
+function renderHeroEditor(main) {
+  const h = adminState.content?.hero || DEFAULT_CONTENT.hero;
+  main.innerHTML = `
+    <form id="heroForm" class="max-w-xl space-y-5">
+      <div><h2 class="font-display text-xl font-bold">Hero Section</h2><p class="text-sm text-muted">The first thing visitors see.</p></div>
+      <div><label class="label">Greeting</label><input class="input" name="greeting" value="${esc(h.greeting)}" /></div>
+      <div><label class="label">Full Name</label><input class="input" name="name" value="${esc(h.name)}" /><p class="mt-1 text-xs text-muted">The last word is shown in gradient color automatically.</p></div>
+      <div><label class="label">Role</label><input class="input" name="role" value="${esc(h.role)}" /></div>
+      <div><label class="label">Role Highlight</label><input class="input" name="roleHighlight" value="${esc(h.roleHighlight)}" /></div>
+      <div><label class="label">Short Description</label><textarea class="input" rows="4" name="description">${esc(h.description)}</textarea></div>
+      <div>
+        <label class="label">Photo</label>
+        <div class="flex gap-2">
+          <input class="input flex-1" name="photoUrl" id="photoUrlInput" value="${esc(h.photoUrl)}" placeholder="Paste an image URL…" />
+          <label class="btn-outline btn-sm cursor-pointer">Upload<input type="file" id="photoUpload" accept="image/*" class="hidden" /></label>
+        </div>
+        <p id="photoUploadStatus" class="mt-1 text-xs text-muted"></p>
+        ${h.photoUrl ? `<img src="${esc(h.photoUrl)}" class="mt-2 h-20 w-20 rounded-lg border border-line object-cover" id="photoPreview" />` : `<img class="mt-2 hidden h-20 w-20 rounded-lg border border-line object-cover" id="photoPreview" />`}
+      </div>
+      <div><label class="label">Resume / CV URL</label><input class="input" name="resumeUrl" value="${esc(h.resumeUrl)}" /></div>
+      <div class="flex items-center gap-3 pt-2" id="heroSaveRow"><button type="submit" class="btn-primary">Save Changes</button></div>
+    </form>`;
+
+  $('#photoUpload').onchange = async (e) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    $('#photoUploadStatus').textContent = 'Uploading…';
+    try {
+      const url = await uploadImage(file, 'hero');
+      $('#photoUrlInput').value = url;
+      const preview = $('#photoPreview'); preview.src = url; preview.classList.remove('hidden');
+      $('#photoUploadStatus').textContent = '';
+    } catch { $('#photoUploadStatus').textContent = 'Upload failed — check Storage is enabled.'; }
+  };
+
+  $('#heroForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const hero = Object.fromEntries(fd.entries());
+    await setDoc(CONTENT_DOC, { hero }, { merge: true });
+    adminState.content = { ...adminState.content, hero };
+    adminState.contentExists = true;
+    savedFlag($('#heroSaveRow'));
+  };
+}
+
+/* ---- About & stats editor ---- */
+function renderAboutEditor(main) {
+  const a = adminState.content?.about || DEFAULT_CONTENT.about;
+  let stats = JSON.parse(JSON.stringify(adminState.content?.stats || DEFAULT_CONTENT.stats));
+
+  function paintStats() {
+    $('#statsList').innerHTML = stats.map((s, i) => `
+      <div class="flex items-center gap-2" data-stat-row="${i}">
+        <input class="input w-24 stat-value" value="${esc(s.value)}" placeholder="15+" />
+        <input class="input flex-1 stat-label" value="${esc(s.label)}" placeholder="Projects Completed" />
+        <button type="button" data-remove-stat="${i}" class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-muted hover:bg-surface2 hover:text-rose-400"><i class="fa-solid fa-trash text-xs"></i></button>
+      </div>`).join('');
+    $$('[data-remove-stat]').forEach((b) => b.onclick = () => { stats.splice(Number(b.dataset.removeStat), 1); paintStats(); });
+    $('#statsCount').textContent = `(${stats.length}/6)`;
+  }
+
+  main.innerHTML = `
+    <form id="aboutForm" class="max-w-xl space-y-5">
+      <div><h2 class="font-display text-xl font-bold">About & Stats</h2><p class="text-sm text-muted">Tell visitors what you're about, with a few numbers.</p></div>
+      <div><label class="label">Eyebrow Label</label><input class="input" name="eyebrow" value="${esc(a.eyebrow)}" /></div>
+      <div><label class="label">Heading</label><input class="input" name="heading" value="${esc(a.heading)}" /></div>
+      <div><label class="label">Heading Highlight</label><input class="input" name="headingHighlight" value="${esc(a.headingHighlight)}" /><p class="mt-1 text-xs text-muted">Must be an exact phrase inside the heading — shown in gradient color.</p></div>
+      <div><label class="label">Paragraph</label><textarea class="input" rows="5" name="paragraph">${esc(a.paragraph)}</textarea></div>
+      <div class="pt-4">
+        <div class="flex items-center justify-between"><label class="label !mb-0">Stats <span id="statsCount"></span></label><button type="button" id="addStatBtn" class="btn-outline !px-3 !py-1.5 text-xs"><i class="fa-solid fa-plus text-[10px]"></i> Add Stat</button></div>
+        <div id="statsList" class="mt-3 space-y-3"></div>
+      </div>
+      <div class="flex items-center gap-3 pt-2" id="aboutSaveRow"><button type="submit" class="btn-primary">Save Changes</button></div>
+    </form>`;
+
+  paintStats();
+  $('#addStatBtn').onclick = () => { if (stats.length < 6) { stats.push({ id: uid(), value: '0', label: 'New Stat' }); paintStats(); } };
+
+  $('#aboutForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const about = Object.fromEntries(fd.entries());
+    const rows = $$('[data-stat-row]');
+    const newStats = rows.map((row, i) => ({ id: stats[i].id || uid(), value: row.querySelector('.stat-value').value, label: row.querySelector('.stat-label').value }));
+    await setDoc(CONTENT_DOC, { about, stats: newStats }, { merge: true });
+    adminState.content = { ...adminState.content, about, stats: newStats };
+    adminState.contentExists = true;
+    savedFlag($('#aboutSaveRow'));
+  };
+}
+
+/* ---- Skills editor ---- */
+function renderSkillsEditor(main) {
+  function paint() {
+    main.innerHTML = `
+      <div class="max-w-xl space-y-6">
+        <div><h2 class="font-display text-xl font-bold">Skills</h2><p class="text-sm text-muted">The tools and tech grid shown on your site.</p></div>
+        <div class="flex items-end gap-2">
+          <div class="flex-1"><label class="label">Add a skill</label>
+            <select id="newSkillSelect" class="input">${ICON_KEYS.map((k) => `<option value="${k}">${ICONS[k].label}</option>`).join('')}</select>
+          </div>
+          <button type="button" id="addSkillBtn" class="btn-primary !px-4 !py-2 text-sm"><i class="fa-solid fa-plus text-[10px]"></i> Add</button>
+        </div>
+        <div id="skillsList" class="space-y-2">
+          ${adminState.skills.map((s, i) => `
+            <div class="card flex items-center gap-3 px-4 py-3">
+              ${iconHtml(s.iconKey, 20)}
+              <span class="flex-1 text-sm">${esc((ICONS[s.iconKey] || ICONS.javascript).label)}</span>
+              <button data-skill-up="${i}" ${i === 0 ? 'disabled' : ''} class="rounded-lg p-2 text-muted hover:bg-surface2 hover:text-ink disabled:opacity-30"><i class="fa-solid fa-arrow-up text-xs"></i></button>
+              <button data-skill-down="${i}" ${i === adminState.skills.length - 1 ? 'disabled' : ''} class="rounded-lg p-2 text-muted hover:bg-surface2 hover:text-ink disabled:opacity-30"><i class="fa-solid fa-arrow-down text-xs"></i></button>
+              <button data-skill-del="${s.id}" class="rounded-lg p-2 text-muted hover:bg-surface2 hover:text-rose-400"><i class="fa-solid fa-trash text-xs"></i></button>
+            </div>`).join('') || `<p class="text-sm text-muted">No skills yet.</p>`}
+        </div>
+      </div>`;
+
+    $('#addSkillBtn').onclick = async () => {
+      const maxOrder = adminState.skills.reduce((m, s) => Math.max(m, s.order ?? 0), -1);
+      const ref = await addDoc(collection(db, 'skills'), { iconKey: $('#newSkillSelect').value, order: maxOrder + 1 });
+      adminState.skills.push({ id: ref.id, iconKey: $('#newSkillSelect').value, order: maxOrder + 1 });
+      paint();
+    };
+    $$('[data-skill-del]').forEach((b) => b.onclick = async () => {
+      await deleteDoc(doc(db, 'skills', b.dataset.skillDel));
+      adminState.skills = adminState.skills.filter((s) => s.id !== b.dataset.skillDel);
+      paint();
+    });
+    $$('[data-skill-up]').forEach((b) => b.onclick = () => moveSkill(Number(b.dataset.skillUp), -1));
+    $$('[data-skill-down]').forEach((b) => b.onclick = () => moveSkill(Number(b.dataset.skillDown), 1));
+
+    async function moveSkill(idx, dir) {
+      const swapIdx = idx + dir;
+      if (swapIdx < 0 || swapIdx >= adminState.skills.length) return;
+      const a = adminState.skills[idx], b = adminState.skills[swapIdx];
+      await updateDoc(doc(db, 'skills', a.id), { order: b.order });
+      await updateDoc(doc(db, 'skills', b.id), { order: a.order });
+      [a.order, b.order] = [b.order, a.order];
+      adminState.skills.sort((x, y) => (x.order ?? 0) - (y.order ?? 0));
+      paint();
+    }
+  }
+  paint();
+}
+
+/* ---- Services editor ---- */
+function renderServicesEditor(main) {
+  function paint() {
+    main.innerHTML = `
+      <div class="max-w-xl space-y-6">
+        <div class="flex items-center justify-between">
+          <div><h2 class="font-display text-xl font-bold">What I Do</h2><p class="text-sm text-muted">Services shown on your site, grouped into Development and Design.</p></div>
+          <button id="addServiceBtn" class="btn-outline !px-4 !py-2 text-xs"><i class="fa-solid fa-plus text-[10px]"></i> Add</button>
+        </div>
+        <div id="servicesList" class="space-y-3">
+          ${adminState.services.map((s, i) => `
+            <div class="card space-y-3 p-4" data-service-id="${s.id}">
+              <div class="flex gap-2">
+                <select class="input w-32 sv-icon">${SERVICE_ICON_KEYS.map((k) => `<option value="${k}" ${k === s.iconKey ? 'selected' : ''}>${k}</option>`).join('')}</select>
+                <select class="input w-32 sv-group">
+                  <option value="development" ${s.group !== 'design' ? 'selected' : ''}>Development</option>
+                  <option value="design" ${s.group === 'design' ? 'selected' : ''}>Design</option>
+                </select>
+                <input class="input flex-1 sv-title" value="${esc(s.title)}" placeholder="Service title" />
+              </div>
+              <textarea class="input sv-desc" rows="2" placeholder="One sentence about this service">${esc(s.description)}</textarea>
+              <div class="flex items-center gap-2">
+                <button type="button" data-save-service="${i}" class="btn-primary !px-4 !py-1.5 text-xs">Save</button>
+                <span class="save-flag-${i}"></span>
+                <div class="ml-auto flex gap-1">
+                  <button data-sv-up="${i}" ${i === 0 ? 'disabled' : ''} class="rounded-lg p-2 text-muted hover:bg-surface2 hover:text-ink disabled:opacity-30"><i class="fa-solid fa-arrow-up text-xs"></i></button>
+                  <button data-sv-down="${i}" ${i === adminState.services.length - 1 ? 'disabled' : ''} class="rounded-lg p-2 text-muted hover:bg-surface2 hover:text-ink disabled:opacity-30"><i class="fa-solid fa-arrow-down text-xs"></i></button>
+                  <button data-sv-del="${s.id}" class="rounded-lg p-2 text-muted hover:bg-surface2 hover:text-rose-400"><i class="fa-solid fa-trash text-xs"></i></button>
+                </div>
+              </div>
+            </div>`).join('') || `<p class="text-sm text-muted">No services yet.</p>`}
+        </div>
+      </div>`;
+
+    $('#addServiceBtn').onclick = async () => {
+      const maxOrder = adminState.services.reduce((m, s) => Math.max(m, s.order ?? 0), -1);
+      const data = { title: 'New Service', description: 'What this service covers.', iconKey: 'code', group: 'development', order: maxOrder + 1 };
+      const ref = await addDoc(collection(db, 'services'), data);
+      adminState.services.push({ id: ref.id, ...data });
+      paint();
+    };
+    $$('[data-save-service]').forEach((b) => b.onclick = async () => {
+      const i = Number(b.dataset.saveService);
+      const card = $$('[data-service-id]')[i];
+      const data = {
+        iconKey: card.querySelector('.sv-icon').value,
+        group: card.querySelector('.sv-group').value,
+        title: card.querySelector('.sv-title').value,
+        description: card.querySelector('.sv-desc').value,
+      };
+      await updateItem('services', adminState.services[i].id, data);
+      adminState.services[i] = { ...adminState.services[i], ...data };
+      const flag = document.createElement('span'); flag.className = 'text-xs text-emerald-400'; flag.textContent = 'Saved ✓';
+      card.querySelector(`.save-flag-${i}`).appendChild(flag);
+      setTimeout(() => flag.remove(), 1500);
+    });
+    $$('[data-sv-del]').forEach((b) => b.onclick = async () => {
+      await deleteDoc(doc(db, 'services', b.dataset.svDel));
+      adminState.services = adminState.services.filter((s) => s.id !== b.dataset.svDel);
+      paint();
+    });
+    $$('[data-sv-up]').forEach((b) => b.onclick = () => moveService(Number(b.dataset.svUp), -1));
+    $$('[data-sv-down]').forEach((b) => b.onclick = () => moveService(Number(b.dataset.svDown), 1));
+
+    async function moveService(idx, dir) {
+      const swapIdx = idx + dir;
+      if (swapIdx < 0 || swapIdx >= adminState.services.length) return;
+      const a = adminState.services[idx], b = adminState.services[swapIdx];
+      await updateDoc(doc(db, 'services', a.id), { order: b.order });
+      await updateDoc(doc(db, 'services', b.id), { order: a.order });
+      [a.order, b.order] = [b.order, a.order];
+      adminState.services.sort((x, y) => (x.order ?? 0) - (y.order ?? 0));
+      paint();
+    }
+  }
+  paint();
+}
+
+async function updateItem(col, id, data) { await updateDoc(doc(db, col, id), data); }
+
+/* ---- Projects editor ---- */
+function renderProjectsEditor(main) {
+  function paint() {
+    main.innerHTML = `
+      <div class="max-w-xl space-y-6">
+        <div class="flex items-center justify-between">
+          <div><h2 class="font-display text-xl font-bold">Projects</h2><p class="text-sm text-muted">Each project shows its name, what it does, then images and video.</p></div>
+          <button id="addProjectBtn" class="btn-outline !px-4 !py-2 text-xs"><i class="fa-solid fa-plus text-[10px]"></i> Add Project</button>
+        </div>
+        <div id="projectsList" class="space-y-3">
+          ${adminState.projects.map((p, i) => projectEditorRow(p, i)).join('') || `<p class="text-sm text-muted">No projects yet.</p>`}
+        </div>
+      </div>`;
+
+    $('#addProjectBtn').onclick = async () => {
+      const maxOrder = adminState.projects.reduce((m, p) => Math.max(m, p.order ?? 0), -1);
+      const data = { title: 'New Project', description: '', features: [], tags: [], images: [], videoUrl: '', liveUrl: '', repoUrl: '', order: maxOrder + 1 };
+      const ref = await addDoc(collection(db, 'projects'), data);
+      adminState.projects.push({ id: ref.id, ...data });
+      paint();
+    };
+    wireProjectRows();
+  }
+
+  function projectEditorRow(p, i) {
+    return `
+      <div class="card overflow-hidden" data-project-id="${p.id}">
+        <button type="button" data-toggle-project="${i}" class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left">
+          <span class="font-medium">${esc(p.title) || 'Untitled project'}</span>
+          <i class="fa-solid fa-chevron-down text-xs text-muted proj-chevron"></i>
+        </button>
+        <div class="proj-body hidden space-y-4 border-t border-line p-4">
+          <div><label class="label">Project Name</label><input class="input pj-title" value="${esc(p.title)}" /></div>
+          <div><label class="label">Short Description</label><textarea class="input pj-desc" rows="2">${esc(p.description)}</textarea></div>
+          <div><label class="label">What it has / what it can do</label><textarea class="input pj-features" rows="4" placeholder="One per line">${esc((p.features || []).join('\n'))}</textarea></div>
+          <div><label class="label">Tags / Tech used (comma separated)</label><input class="input pj-tags" value="${esc((p.tags || []).join(', '))}" placeholder="React, Firebase, Tailwind" /></div>
+          <div>
+            <label class="label">Images</label>
+            <div class="flex gap-2">
+              <textarea class="input pj-images flex-1" rows="3" placeholder="One image URL per line">${esc((p.images || []).join('\n'))}</textarea>
+              <label class="btn-outline btn-sm cursor-pointer self-start">Upload<input type="file" accept="image/*" class="hidden pj-upload" /></label>
+            </div>
+            <p class="mt-1 text-xs text-muted pj-upload-status"></p>
+            <p class="mt-1 text-xs text-muted">First image is used as the card thumbnail.</p>
+          </div>
+          <div><label class="label">Video URL</label><input class="input pj-video" value="${esc(p.videoUrl)}" placeholder="YouTube, Vimeo, or a direct .mp4 link" /></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="label">Live Site URL</label><input class="input pj-live" value="${esc(p.liveUrl)}" /></div>
+            <div><label class="label">Code / Repo URL</label><input class="input pj-repo" value="${esc(p.repoUrl)}" /></div>
+          </div>
+          <div class="flex items-center gap-3 pt-2">
+            <button type="button" data-save-project="${i}" class="btn-primary !px-4 !py-2 text-sm">Save Project</button>
+            <span class="pj-saved-${i}"></span>
+            <div class="ml-auto flex gap-1">
+              <button data-pj-up="${i}" ${i === 0 ? 'disabled' : ''} class="rounded-lg p-2 text-muted hover:bg-surface2 hover:text-ink disabled:opacity-30"><i class="fa-solid fa-arrow-up text-xs"></i></button>
+              <button data-pj-down="${i}" ${i === adminState.projects.length - 1 ? 'disabled' : ''} class="rounded-lg p-2 text-muted hover:bg-surface2 hover:text-ink disabled:opacity-30"><i class="fa-solid fa-arrow-down text-xs"></i></button>
+              <button data-pj-del="${p.id}" class="rounded-lg p-2 text-muted hover:bg-surface2 hover:text-rose-400"><i class="fa-solid fa-trash text-xs"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function wireProjectRows() {
+    $$('[data-toggle-project]').forEach((b) => b.onclick = () => {
+      const card = b.closest('[data-project-id]');
+      card.querySelector('.proj-body').classList.toggle('hidden');
+      card.querySelector('.proj-chevron').classList.toggle('fa-chevron-down');
+      card.querySelector('.proj-chevron').classList.toggle('fa-chevron-up');
+    });
+
+    $$('.pj-upload').forEach((input, i) => {
+      input.onchange = async (e) => {
+        const file = e.target.files?.[0]; if (!file) return;
+        const card = input.closest('[data-project-id]');
+        const status = card.querySelector('.pj-upload-status');
+        status.textContent = 'Uploading…';
+        try {
+          const url = await uploadImage(file, `projects/${card.dataset.projectId}`);
+          const textarea = card.querySelector('.pj-images');
+          textarea.value = textarea.value ? `${textarea.value}\n${url}` : url;
+          status.textContent = 'Added ✓';
+          setTimeout(() => status.textContent = '', 1500);
+        } catch { status.textContent = 'Upload failed — check Storage is enabled.'; }
+      };
+    });
+
+    $$('[data-save-project]').forEach((b) => b.onclick = async () => {
+      const i = Number(b.dataset.saveProject);
+      const card = $$('[data-project-id]')[i];
+      const data = {
+        title: card.querySelector('.pj-title').value,
+        description: card.querySelector('.pj-desc').value,
+        features: card.querySelector('.pj-features').value.split('\n').map((s) => s.trim()).filter(Boolean),
+        tags: card.querySelector('.pj-tags').value.split(',').map((s) => s.trim()).filter(Boolean),
+        images: card.querySelector('.pj-images').value.split('\n').map((s) => s.trim()).filter(Boolean),
+        videoUrl: card.querySelector('.pj-video').value,
+        liveUrl: card.querySelector('.pj-live').value,
+        repoUrl: card.querySelector('.pj-repo').value,
+      };
+      await updateItem('projects', adminState.projects[i].id, data);
+      adminState.projects[i] = { ...adminState.projects[i], ...data };
+      const flag = document.createElement('span'); flag.className = 'text-xs text-emerald-400'; flag.textContent = 'Saved ✓';
+      card.querySelector(`.pj-saved-${i}`).appendChild(flag);
+      setTimeout(() => flag.remove(), 1500);
+      card.querySelector('button[data-toggle-project] span').textContent = data.title || 'Untitled project';
+    });
+
+    $$('[data-pj-del]').forEach((b) => b.onclick = async () => {
+      await deleteDoc(doc(db, 'projects', b.dataset.pjDel));
+      adminState.projects = adminState.projects.filter((p) => p.id !== b.dataset.pjDel);
+      paint();
+    });
+    $$('[data-pj-up]').forEach((b) => b.onclick = () => moveProject(Number(b.dataset.pjUp), -1));
+    $$('[data-pj-down]').forEach((b) => b.onclick = () => moveProject(Number(b.dataset.pjDown), 1));
+
+    async function moveProject(idx, dir) {
+      const swapIdx = idx + dir;
+      if (swapIdx < 0 || swapIdx >= adminState.projects.length) return;
+      const a = adminState.projects[idx], b = adminState.projects[swapIdx];
+      await updateDoc(doc(db, 'projects', a.id), { order: b.order });
+      await updateDoc(doc(db, 'projects', b.id), { order: a.order });
+      [a.order, b.order] = [b.order, a.order];
+      adminState.projects.sort((x, y) => (x.order ?? 0) - (y.order ?? 0));
+      paint();
+    }
+  }
+
+  paint();
+}
+
+/* ---- Contact & social editor ---- */
+function renderContactEditor(main) {
+  const c = adminState.content?.contact || DEFAULT_CONTENT.contact;
+  const soc = adminState.content?.social || DEFAULT_CONTENT.social;
+  main.innerHTML = `
+    <form id="contactForm" class="max-w-xl space-y-8">
+      <div><h2 class="font-display text-xl font-bold">Contact & Social</h2><p class="text-sm text-muted">How people reach you, and your social links.</p></div>
+      <div class="space-y-4">
+        <p class="text-xs font-medium uppercase tracking-wide text-muted">Contact section</p>
+        <div><label class="label">Heading</label><input class="input" name="heading" value="${esc(c.heading)}" /></div>
+        <div><label class="label">Paragraph</label><textarea class="input" rows="3" name="paragraph">${esc(c.paragraph)}</textarea></div>
+        <div><label class="label">Email</label><input class="input" type="email" name="email" value="${esc(c.email)}" /></div>
+        <div><label class="label">Phone</label><input class="input" name="phone" value="${esc(c.phone)}" /></div>
+        <div><label class="label">Location</label><input class="input" name="location" value="${esc(c.location)}" placeholder="Lahore, Pakistan" /></div>
+      </div>
+      <div class="space-y-4">
+        <p class="text-xs font-medium uppercase tracking-wide text-muted">Social links</p>
+        ${['github','linkedin','twitter','instagram','whatsapp'].map((k) => `<div><label class="label capitalize">${k}</label><input class="input" name="social_${k}" value="${esc(soc[k] || '')}" placeholder="${k === 'whatsapp' ? 'https://wa.me/92xxxxxxxxxx' : 'https://…'}" /></div>`).join('')}
+      </div>
+      <div class="flex items-center gap-3 pt-2" id="contactSaveRow"><button type="submit" class="btn-primary">Save Changes</button></div>
+    </form>`;
+
+  $('#contactForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const contact = { eyebrow: c.eyebrow, heading: fd.get('heading'), paragraph: fd.get('paragraph'), email: fd.get('email'), phone: fd.get('phone'), location: fd.get('location') };
+    const social = { github: fd.get('social_github'), linkedin: fd.get('social_linkedin'), twitter: fd.get('social_twitter'), instagram: fd.get('social_instagram'), whatsapp: fd.get('social_whatsapp') };
+    await setDoc(CONTENT_DOC, { contact, social }, { merge: true });
+    adminState.content = { ...adminState.content, contact, social };
+    adminState.contentExists = true;
+    savedFlag($('#contactSaveRow'));
+  };
+}
+
+/* ---- Settings ---- */
+function renderSettingsEditor(main) {
+  main.innerHTML = `
+    <div class="max-w-xl space-y-8">
+      <div><h2 class="font-display text-xl font-bold">Settings</h2><p class="text-sm text-muted">Setup and account info.</p></div>
+      ${!adminState.contentExists ? `
+        <div class="card space-y-3 p-5">
+          <p class="text-sm font-medium">First time here?</p>
+          <p class="text-sm text-muted">Your site is currently showing placeholder content. Click below once to load starter content into your database — then edit everything from the tabs on the left.</p>
+          <button id="seedBtn" class="btn-primary !px-4 !py-2 text-sm">Load Starter Content</button>
+          <p id="seedStatus" class="text-sm text-emerald-400"></p>
+        </div>` : ''}
+      <div class="card space-y-2 p-5">
+        <p class="text-sm font-medium">Account</p>
+        <p class="text-sm text-muted">Signed in as ${esc(adminState.user?.email || '')}</p>
+        <p class="text-sm text-muted">To change your password, go to Firebase Console → Authentication → Users.</p>
+      </div>
+      <div class="card space-y-2 p-5">
+        <p class="text-sm font-medium">Admin link</p>
+        <p class="text-sm text-muted">This panel lives at <code class="font-mono text-dev">${esc(ADMIN_HASH)}</code>. Keep that link private — anyone who knows it will still need your email and password to sign in.</p>
+      </div>
+    </div>`;
+
+  const seedBtn = $('#seedBtn');
+  if (seedBtn) seedBtn.onclick = async () => {
+    seedBtn.disabled = true; seedBtn.textContent = 'Setting up…';
+    const snap = await getDoc(CONTENT_DOC);
+    if (!snap.exists()) await setDoc(CONTENT_DOC, DEFAULT_CONTENT);
+    for (const s of DEFAULT_SKILLS) await addDoc(collection(db, 'skills'), s);
+    for (const s of DEFAULT_SERVICES) await addDoc(collection(db, 'services'), s);
+    for (const p of DEFAULT_PROJECTS) await addDoc(collection(db, 'projects'), p);
+    await loadAdminData();
+    $('#seedStatus').textContent = 'Starter content loaded — go edit it from the tabs on the left.';
+    seedBtn.remove();
+  };
+}
+
+/* =========================================================================
+   12. BOOT
+   ========================================================================= */
+route();
+</script>
+</body>
+</html>
